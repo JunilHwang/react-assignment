@@ -10,34 +10,34 @@ beforeEach(() => {
 describe('useRef > ', () => {
 
   test('useRef와 똑같이 동작하는 useMyRef를 만들어서 사용할 수 있다.', () => {
-    let currentRef: { current: null | HTMLDivElement } = { current: null }
-    let expected = false;
-    const UseMyRefTest = () => {
+    const refs = new Set();
+
+    const UseMyRefTest = ({ label }: { label: string }) => {
       const [, rerender] = useState({});
       // useRef로 변경해서 테스트하면 통과됩니다. useMyRef를 useRef와 똑같이 동작하도록 구현해보세요.
       const ref = useMyRef<HTMLDivElement>(null);
-      expected = currentRef === ref;
-      if (!expected) {
-        currentRef = ref;
-      }
+      refs.add(ref);
 
       return (
         <div ref={ref}>
-          <button onClick={() => rerender({})}>rerender</button>
+          <button onClick={() => rerender({})}>{label}</button>
         </div>
       )
     }
 
 
-    const { getByText } = render(<UseMyRefTest/>);
-
-    expect(expected).toBe(false);
-    expect(currentRef.current?.outerHTML).toBe('<div><button>rerender</button></div>');
+    const { getByText } = render(
+      <>
+        <UseMyRefTest label="rerender1" />
+        <UseMyRefTest label="rerender2" />
+      </>
+    );
 
     act(() => {
-      fireEvent.click(getByText('rerender'));
+      fireEvent.click(getByText('rerender1'));
+      fireEvent.click(getByText('rerender2'));
     })
 
-    expect(expected).toBe(true);
+    expect(refs.size).toBe(2);
   })
 })
