@@ -8,6 +8,7 @@ import * as UseCallbackTestUtils from '../UseCallbackTest.utils.tsx';
 import UseCallbackTest from "../UseCallbackTest.tsx";
 import { useState } from "react";
 import { useMyRef } from "../useMyRef.ts";
+import RequireRefactoring from "../RequireRefactoring.tsx";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -157,6 +158,33 @@ describe('다양한 hook을 이용하여 테스트코드를 통과할 수 있도
       })
 
       expect(expected).toBe(true);
+    })
+  })
+
+  describe('Props 최적화 >', () => {
+    test('useMemo나 useCallback을 사용하지 않고 props를 최적화하여 리렌더링을 방지할 수 있다', () => {
+      const countRendering = vi.fn();
+      const TestComponent = () => {
+        const [, rerender] = useState({});
+        return (
+          <div>
+            <RequireRefactoring countRendering={countRendering}/>
+            <button onClick={() => rerender({})}>rerender</button>
+          </div>
+        )
+      }
+
+      const { getByText } = render(<TestComponent/>);
+
+      expect(countRendering).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(getByText('rerender'))
+      fireEvent.click(getByText('rerender'))
+      fireEvent.click(getByText('rerender'))
+      fireEvent.click(getByText('rerender'))
+      fireEvent.click(getByText('rerender'))
+
+      expect(countRendering).toHaveBeenCalledTimes(1);
     })
   })
 })
