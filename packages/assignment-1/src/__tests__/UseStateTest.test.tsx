@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import UseStateTest from '../UseStateTest';
 
 
-test('adds 1 + 2 to equal 3', () => {
+test('증가 버튼을 누르면 count의 값이 증가한다.', () => {
   render(<UseStateTest />);
 
   expect(document.body.innerHTML).toBe('<div><div>count: 1<button>증가</button></div></div>');
