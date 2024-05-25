@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { repeatBarked, repeatMeow } from "./utils";
+import { repeatBarked, repeatMeow } from "./UseMemoTest.utils";
 
 export default function UseMemoTest() {
   const [meowCount, setMeowCount] = useState(1);

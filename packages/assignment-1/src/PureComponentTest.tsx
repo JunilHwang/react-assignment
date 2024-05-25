@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Cat, Dog } from "./components";
+import { Cat, Dog } from "./PureComponentTest.components";
 
 
 // NOTE: 다른 파일은 수정하지 않고, 현재 파일만 수정하여 문제를 해결해주세요.
