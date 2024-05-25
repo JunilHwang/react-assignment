@@ -5,9 +5,6 @@
   "type": "module",
   "scripts": {
     "test": "vitest --reporter=verbose",
-    "test:useState": "vitest --reporter=verbose -t 'useState >'",
-    "test:useMemo": "vitest --reporter=verbose -t 'useMemo, memo >'",
-    "test:useCallback": "vitest --reporter=verbose -t 'useCallback, memo > '",
     "test:ui": "vitest --ui"
   },
   "dependencies": {
