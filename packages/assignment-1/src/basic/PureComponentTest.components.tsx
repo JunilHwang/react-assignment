@@ -1,4 +1,4 @@
-import { repeatBarked, repeatMeow } from "./UseMemoTest.utils";
+import { repeatBarked, repeatMeow } from "./UseMemoTest.utils.ts";
 
 type TCryingProps = {
   crying: number;

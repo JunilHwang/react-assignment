@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import * as useMemoTestUtils from '../UseMemoTest.utils';
+import * as useMemoTestUtils from '../UseMemoTest.utils.ts';
 import UseMemoTest from "../UseMemoTest.tsx";
 import UseStateTest from "../UseStateTest.tsx";
 import PureComponentTest from "../PureComponentTest.tsx";
 import * as UseCallbackTestUtils from '../UseCallbackTest.utils.tsx';
 import UseCallbackTest from "../UseCallbackTest.tsx";
 import { useState } from "react";
-import { useMyRef } from "../useMyRef.ts";
 import RequireRefactoring from "../RequireRefactoring.tsx";
 
 beforeEach(() => {
@@ -123,41 +122,6 @@ describe('다양한 hook을 이용하여 테스트코드를 통과할 수 있도
 
       expect(spyCallMeow).toHaveBeenCalledTimes(1);
       expect(spyCallBark).toHaveBeenCalledTimes(1);
-    })
-  })
-
-  describe('useRef > ', () => {
-
-    test('useRef와 똑같이 동작하는 useMyRef를 만들어서 사용할 수 있다.', () => {
-      let currentRef: { current: null | HTMLDivElement } = { current: null }
-      let expected = false;
-      const UseMyRefTest = () => {
-        const [, rerender] = useState({});
-        // useRef로 변경해서 테스트하면 통과됩니다. useMyRef를 useRef와 똑같이 동작하도록 구현해보세요.
-        const ref = useMyRef<HTMLDivElement>(null);
-        expected = currentRef === ref;
-        if (!expected) {
-          currentRef = ref;
-        }
-
-        return (
-          <div ref={ref}>
-            <button onClick={() => rerender({})}>rerender</button>
-          </div>
-        )
-      }
-
-
-      const { getByText } = render(<UseMyRefTest/>);
-
-      expect(expected).toBe(false);
-      expect(currentRef.current?.outerHTML).toBe('<div><button>rerender</button></div>');
-
-      act(() => {
-        fireEvent.click(getByText('rerender'));
-      })
-
-      expect(expected).toBe(true);
     })
   })
 

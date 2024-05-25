@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest --reporter=verbose",
+    "test:basic": "vitest --reporter=verbose hooks.test.tsx",
+    "test:advanced": "vitest --reporter=verbose useMyRef.test.tsx",
     "test:ui": "vitest --ui"
   },
   "dependencies": {
