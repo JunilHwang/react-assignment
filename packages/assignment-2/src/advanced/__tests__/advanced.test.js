@@ -1,4 +1,4 @@
-import { it, describe, expect } from "vitest";
+import { describe } from "vitest";
 import { memo1, memo2 } from "../advanced.js";
 
 describe('assignment 2 > advanced : 값을 캐시하기', () => {
