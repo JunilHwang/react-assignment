@@ -1,4 +1,4 @@
-name: CI Assignment 1
+name: CI Assignment 3
 
 on:
   pull_request:
