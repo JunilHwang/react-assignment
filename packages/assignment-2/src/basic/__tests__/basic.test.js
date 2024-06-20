@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { createNumber1, createNumber2, createNumber3, CustomNumber, deepEquals, shallowEquals } from "../basic";
+import { describe, expect, it, beforeEach } from "vitest";
+import { createNumber1, createNumber2, createNumber3, CustomNumber, deepEquals, shallowEquals, forEach, map, filter, some, every, createUnenumerableObject, } from "../basic";
 
 describe('assignment 2 > basic : 값을 다루기', () => {
   describe('객체를 다뤄봅시다.', () => {
@@ -55,7 +55,11 @@ describe('assignment 2 > basic : 값을 다루기', () => {
     it.each([
       { target1: new Number(1), target2: new Number(1), expected: false },
       { target1: new String(1), target2: new String(1), expected: false },
-      { target1: new class{}(), target2: new class{}(), expected: false },
+      {
+        target1: new class {
+        }(), target2: new class {
+        }(), expected: false
+      },
       { target1: {}, target2: {}, expected: true },
       { target1: 1, target2: 1, expected: true },
       { target1: [], target2: [], expected: true },
@@ -76,7 +80,11 @@ describe('assignment 2 > basic : 값을 다루기', () => {
     it.each([
       { target1: new Number(1), target2: new Number(1), expected: false },
       { target1: new String(1), target2: new String(1), expected: false },
-      { target1: new class{}(), target2: new class{}(), expected: false },
+      {
+        target1: new class {
+        }(), target2: new class {
+        }(), expected: false
+      },
       { target1: {}, target2: {}, expected: true },
       { target1: 1, target2: 1, expected: true },
       { target1: [], target2: [], expected: true },
@@ -89,8 +97,16 @@ describe('assignment 2 > basic : 값을 다루기', () => {
       { target1: [1, 2], target2: [1, 2, 3], expected: false },
       { target1: { a: 1 }, target2: { a: 1 }, expected: true },
       { target1: { a: 1 }, target2: { a: 2 }, expected: false },
-      { target1: { a: 1, b: { c: 2, d: [], e: [1, 2, 3] } }, target2: { a: 1, b: { c: 2, d: [], e: [1, 2, 3] } }, expected: true },
-      { target1: { a: 1, b: { c: 2, d: [], e: [1, 2, 3], f: new Number(1) } }, target2: { a: 1, b: { c: 2, d: [], e: [1, 2, 3], f: new Number(1) } }, expected: false },
+      {
+        target1: { a: 1, b: { c: 2, d: [], e: [1, 2, 3] } },
+        target2: { a: 1, b: { c: 2, d: [], e: [1, 2, 3] } },
+        expected: true
+      },
+      {
+        target1: { a: 1, b: { c: 2, d: [], e: [1, 2, 3], f: new Number(1) } },
+        target2: { a: 1, b: { c: 2, d: [], e: [1, 2, 3], f: new Number(1) } },
+        expected: false
+      },
     ])('deepEquals($target1, $target2) === $expected', ({ target1, target2, expected }) => {
       expect(deepEquals(target1, target2)).toBe(expected);
     })
@@ -194,4 +210,85 @@ describe('assignment 2 > basic : 값을 다루기', () => {
       expect(JSON.stringify(num2) + `${num4}`).toBe('"2"2');
     })
   })
+
+  describe('Array와 Object를 동시에 다룰 수 있는 함수를 만들어봅시다.', () => {
+    beforeEach(() => {
+      document.body.innerHTML = `<div id="test"><span>1</span><span>2</span></div>`;
+    })
+
+    const obj = createUnenumerableObject({ a: 1, b: 2 });
+
+    it('createUnenumerableObject > ', () => {
+      expect(obj.a).toEqual(1);
+      expect(obj.b).toEqual(2);
+      expect({ ...obj }).toEqual({});
+    })
+
+    it('forEach > ', () => {
+      const results = [];
+      forEach(obj, (value, key) => results.push({ value, key }));
+      expect(results).toStrictEqual([{ value: 1, key: 'a' }, { value: 2, key: 'b' }]);
+      results.length = 0;
+
+      forEach(['a', 'b'], (value, key) => results.push({ value, key }));
+      expect(results).toStrictEqual([{ value: 'a', key: 0 }, { value: 'b', key: 1 }]);
+      results.length = 0;
+
+
+      const spans = document.querySelectorAll('#test span');
+      forEach(spans, (value, key) => results.push({ value, key }));
+      expect(results).toStrictEqual([{ value: spans[0], key: 0 }, { value: spans[1], key: 1 }]);
+    })
+
+    it('map > ', () => {
+      const objectResult = map(obj, (value) => value * 2);
+      expect(objectResult).toStrictEqual({ a: 2, b: 4 });
+
+      const arrayResult = map(['a', 'b'], (value) => value.toUpperCase());
+      expect(arrayResult).toStrictEqual(['A', 'B']);
+
+      const spans = document.querySelectorAll('#test span');
+      const spansResult = map(spans, (value) => value.textContent);
+      expect(spansResult).toStrictEqual(['1', '2']);
+    });
+
+    it('filter > ', () => {
+      const objectResult = filter(obj, (value) => value > 1);
+      expect(objectResult).toStrictEqual({ b: 2 });
+
+      const arrayResult = filter(['a', 'b'], (value) => value === 'b');
+      expect(arrayResult).toStrictEqual(['b']);
+
+      const spans = document.querySelectorAll('#test span');
+      const spansResult = filter(spans, (value) => value.textContent === '2');
+      expect(spansResult).toStrictEqual([spans[1]]);
+    });
+
+    it('every > ', () => {
+      const objectResult = every(obj, (value) => value > 0);
+      expect(objectResult).toBe(true);
+
+      const arrayResult = every(['a', 'b'], (value) => typeof value === 'string');
+      expect(arrayResult).toBe(true);
+
+      const spans = document.querySelectorAll('#test span');
+      const spansResult = every(spans, (value) => value.tagName === 'SPAN');
+      expect(spansResult).toBe(true);
+    });
+
+    it('some > ', () => {
+      const objectResult = some(obj, (value) => value > 1);
+      expect(objectResult).toBe(true);
+
+      const arrayResult = some(['a', 'b'], (value) => value === 'a');
+      expect(arrayResult).toBe(true);
+
+      const spans = document.querySelectorAll('#test span');
+      const spansResult = some(spans, (value) => value.textContent === '1');
+      expect(spansResult).toBe(true);
+    });
+  })
+
+
+
 })

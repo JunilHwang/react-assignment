@@ -22,3 +22,31 @@ export function createNumber3(n) {
 export class CustomNumber {
 
 }
+
+export function createUnenumerableObject(target) {
+  return target;
+}
+
+export function forEach(target, callback) {
+
+}
+
+export function map(target, callback) {
+
+}
+
+export function filter(target, callback) {
+
+}
+
+
+export function every(target, callback) {
+
+}
+
+export function some(target, callback) {
+
+}
+
+
+
