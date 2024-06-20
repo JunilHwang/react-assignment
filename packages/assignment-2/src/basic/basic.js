@@ -71,29 +71,77 @@ export class CustomNumber {
   }
 }
 
+function isIterable(target) {
+  return Array.isArray(target) || typeof target[Symbol.iterator] === 'function';
+}
+
 export function createUnenumerableObject(target) {
-  return target;
+  const obj = {};
+  Object.setPrototypeOf(obj, target);
+  return obj;
 }
 
 export function forEach(target, callback) {
-
+  if (isIterable(target)) {
+    Array.from(target).forEach(callback);
+  } else {
+    for (const key in target) {
+      callback(target[key], key || key, target);
+    }
+  }
 }
 
 export function map(target, callback) {
-
+  if (isIterable(target)) {
+    return Array.from(target).map(callback);
+  } else {
+    const results = {};
+    for (const key in target) {
+      results[key] = callback(target[key], key || key, target);
+    }
+    return results;
+  }
 }
 
 export function filter(target, callback) {
-
+  if (isIterable(target)) {
+    return Array.from(target).filter(callback);
+  } else {
+    const results = {};
+    for (const key in target) {
+      if (callback(target[key], key || key, target)) {
+        results[key] = target[key];
+      }
+    }
+    return results;
+  }
 }
 
 
 export function every(target, callback) {
-
+  if (isIterable(target)) {
+    return Array.from(target).every(callback);
+  } else {
+    for (const key in target) {
+      if (!callback(target[key], key || key, target)) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 export function some(target, callback) {
-
+  if (isIterable(target)) {
+    return Array.from(target).some(callback);
+  } else {
+    for (const key in target) {
+      if (callback(target[key], key || key, target)) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
 
