@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start:origin": "vite serve --open index.origin.html",
-    "start:basic": "vite serve --open index.basic.html",
+    "start:origin": "vite serve --open ./index.origin.html",
+    "start:basic": "vite serve --open ./index.basic.html",
     "test": "vitest",
     "test:basic": "vitest src/basic",
     "test:advanced": "vitest src/advanced",
