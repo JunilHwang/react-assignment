@@ -6,6 +6,7 @@
   "scripts": {
     "start:origin": "vite serve --open ./index.origin.html",
     "start:basic": "vite serve --open ./index.basic.html",
+    "start:advanced": "vite serve --open ./index.advanced.html",
     "test": "vitest",
     "test:basic": "vitest src/basic",
     "test:advanced": "vitest src/advanced",

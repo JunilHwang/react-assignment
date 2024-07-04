@@ -1,4 +1,4 @@
-import { CartItem, MainLayout } from './templates.js';
+import { CartItem, CartTotal, MainLayout } from './templates.js';
 import { Selectors } from "./selectors.js";
 
 export const createCartView = ({ items, addItem, getItems, updateQuantity, getTotal, removeItem }) => {
@@ -30,7 +30,8 @@ export const createCartView = ({ items, addItem, getItems, updateQuantity, getTo
 
   const renderCart = () => {
     renderCartItems();
-    document.getElementById(Selectors.Ids.CART_TOTAL).textContent = `총액: ${getTotal()}원`;
+    const { total, discountRate } = getTotal();
+    document.getElementById(Selectors.Ids.CART_TOTAL).innerHTML = CartTotal({ total, discountRate });
   };
 
   const setupEventListeners = () => {

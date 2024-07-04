@@ -28,3 +28,10 @@ export const CartItem = ({ product, quantity  }) => `
     </div>
   </div>
 `.trim();
+
+export const CartTotal = ({ total, discountRate }) => `
+  <div class="text-xl font-bold my-4">
+    총액: ${total}원
+    ${discountRate > 0 ? `<span class="text-green-500 ml-2">(${(discountRate * 100).toFixed(1)}% 할인 적용)</span>` : ''}
+  </div>
+`.trim();
