@@ -1,4 +1,4 @@
-import { CartItem, Coupon } from "../../../types";
+import { CartItem, Coupon } from "../../../../types.ts";
 
 export const calculateItemTotal = (item: CartItem): number => {
   const { price } = item.product;
@@ -55,3 +55,5 @@ export const updateCartItemQuantity = (cart: CartItem[], productId: string, newQ
     return item;
   }).filter((item): item is CartItem => item !== null);
 };
+
+
