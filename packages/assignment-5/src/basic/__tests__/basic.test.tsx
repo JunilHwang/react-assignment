@@ -2,7 +2,7 @@ import { useState } from "react";
 import { describe, expect, test } from 'vitest';
 import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { CartPage } from '../../refactoring/components/cart-page/CartPage.tsx';
-import { AdminPage } from "../../refactoring/components/AdminPage";
+
 import { CartItem, Coupon, Product } from '../../types';
 import { useCoupons, useProducts } from "../../refactoring/hooks";
 import {
@@ -12,6 +12,7 @@ import {
   updateCartItemQuantity
 } from "../../refactoring/components/cart-page/utils";
 import { useCart } from "../../refactoring/components/cart-page/hooks";
+import { AdminPage } from "../../refactoring/components/admin-page";
 
 const mockProducts: Product[] = [
   {
