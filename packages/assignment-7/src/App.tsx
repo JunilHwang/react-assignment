@@ -34,6 +34,7 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { BellIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
+import { getDaysInMonth, getWeekDates, formatWeek, formatMonth, isDateInRange } from "./utils";
 
 type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -280,6 +281,18 @@ function App() {
 
     for (const event of upcomingEvents) {
       try {
+        const response = await fetch('/api/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ eventId: event.id, notified: true }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update notification status');
+        }
+
         setNotifications(prev => [...prev, {
           id: event.id,
           message: `${event.notificationTime}분 후 ${event.title} 일정이 시작됩니다.`
@@ -372,23 +385,6 @@ function App() {
     setNotificationTime(event.notificationTime);
   };
 
-  const getDaysInMonth = (year: number, month: number) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
-
-  const getWeekDates = (date: Date) => {
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(date.setDate(diff));
-    const weekDates = [];
-    for (let i = 0; i < 7; i++) {
-      const nextDate = new Date(monday);
-      nextDate.setDate(monday.getDate() + i);
-      weekDates.push(nextDate);
-    }
-    return weekDates;
-  };
-
   const navigate = (direction: 'prev' | 'next') => {
     setCurrentDate(prevDate => {
       const newDate = new Date(prevDate);
@@ -417,32 +413,20 @@ function App() {
       const eventDate = new Date(event.date);
       if (view === 'week') {
         const weekDates = getWeekDates(currentDate);
-        return eventDate >= weekDates[0] && eventDate <= weekDates[6];
+        return isDateInRange(eventDate, weekDates[0], weekDates[6]);
       } else if (view === 'month') {
-        return eventDate.getMonth() === currentDate.getMonth() &&
-          eventDate.getFullYear() === currentDate.getFullYear();
+        const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        return isDateInRange(eventDate, monthStart, monthEnd);
       }
       return true;
     })
   })();
 
-  const formatWeek = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const weekNumber = Math.ceil(date.getDate() / 7);
-    return `${year}년 ${month}월 ${weekNumber}주`;
-  };
-
-  const formatMonth = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    return `${year}년 ${month}월`;
-  };
-
   const renderWeekView = () => {
     const weekDates = getWeekDates(currentDate);
     return (
-      <VStack data-testid="week-view" align="stretch" w="full" spacing={4}>
+      <VStack align="stretch" w="full" spacing={4}>
         <Heading size="md">{formatWeek(currentDate)}</Heading>
         <Table variant="simple" w="full">
           <Thead>
@@ -509,7 +493,7 @@ function App() {
     }
 
     return (
-      <VStack data-testid="month-view" align="stretch" w="full" spacing={4}>
+      <VStack align="stretch" w="full" spacing={4}>
         <Heading size="md">{formatMonth(currentDate)}</Heading>
         <Table variant="simple" w="full">
           <Thead>
@@ -712,7 +696,8 @@ function App() {
               icon={<ChevronLeftIcon/>}
               onClick={() => navigate('prev')}
             />
-            <Select aria-label="view" value={view} onChange={(e) => setView(e.target.value as 'week' | 'month')}>
+            <Select value={view} onChange={(e) => setView(e.target.value as 'week' | 'month')}>
+              <option value="day">Day</option>
               <option value="week">Week</option>
               <option value="month">Month</option>
             </Select>
@@ -727,7 +712,7 @@ function App() {
           {view === 'month' && renderMonthView()}
         </VStack>
 
-        <VStack data-testid="event-list" w="500px" h="full" overflowY="auto">
+        <VStack data-testid="eventList" w="500px" h="full" overflowY="auto">
           <FormControl>
             <FormLabel>일정 검색</FormLabel>
             <Input
