@@ -185,7 +185,9 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
 
     test('주별 뷰에 일정이 정확히 표시되는지 확인한다', async () => {
       const date = new Date();
-      const fullDate = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+      const fillZero = (n: number) => String(n).padStart(2, "0");
+      const fullDate = `${date.getFullYear()}-${fillZero(date.getMonth() + 1)}-${fillZero(date.getDate())}`;
+
       events.length = 0;
       events.push({
         id: 1,
@@ -199,6 +201,8 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
         repeat: { type: 'none', interval: 0 },
         notificationTime: 10,
       })
+
+
       const { user } = setup(<App/>);
 
       // 주별 뷰로 변경
