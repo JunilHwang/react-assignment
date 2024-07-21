@@ -280,18 +280,6 @@ function App() {
 
     for (const event of upcomingEvents) {
       try {
-        const response = await fetch('/api/notifications', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ eventId: event.id, notified: true }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to update notification status');
-        }
-
         setNotifications(prev => [...prev, {
           id: event.id,
           message: `${event.notificationTime}분 후 ${event.title} 일정이 시작됩니다.`
@@ -454,7 +442,7 @@ function App() {
   const renderWeekView = () => {
     const weekDates = getWeekDates(currentDate);
     return (
-      <VStack align="stretch" w="full" spacing={4}>
+      <VStack data-testid="week-view" align="stretch" w="full" spacing={4}>
         <Heading size="md">{formatWeek(currentDate)}</Heading>
         <Table variant="simple" w="full">
           <Thead>
@@ -521,7 +509,7 @@ function App() {
     }
 
     return (
-      <VStack align="stretch" w="full" spacing={4}>
+      <VStack data-testid="month-view" align="stretch" w="full" spacing={4}>
         <Heading size="md">{formatMonth(currentDate)}</Heading>
         <Table variant="simple" w="full">
           <Thead>
@@ -710,7 +698,7 @@ function App() {
             </VStack>
           )}
 
-          <Button onClick={addOrUpdateEvent} colorScheme="blue">
+          <Button data-testid="event-submit-button" onClick={addOrUpdateEvent} colorScheme="blue">
             {editingEvent ? '일정 수정' : '일정 추가'}
           </Button>
         </VStack>
@@ -724,8 +712,7 @@ function App() {
               icon={<ChevronLeftIcon/>}
               onClick={() => navigate('prev')}
             />
-            <Select value={view} onChange={(e) => setView(e.target.value as 'week' | 'month')}>
-              <option value="day">Day</option>
+            <Select aria-label="view" value={view} onChange={(e) => setView(e.target.value as 'week' | 'month')}>
               <option value="week">Week</option>
               <option value="month">Month</option>
             </Select>
@@ -740,7 +727,7 @@ function App() {
           {view === 'month' && renderMonthView()}
         </VStack>
 
-        <VStack w="500px" h="full" overflowY="auto">
+        <VStack data-testid="event-list" w="500px" h="full" overflowY="auto">
           <FormControl>
             <FormLabel>일정 검색</FormLabel>
             <Input

@@ -97,8 +97,6 @@ let events = [
   }
 ];
 
-let notifiedEvents = new Set();
-
 // 일정 조회
 app.get('/api/events', (req, res) => {
   res.json(events);
@@ -131,22 +129,6 @@ app.delete('/api/events/:id', (req, res) => {
   const id = parseInt(req.params.id);
   events = events.filter(event => event.id !== id);
   res.status(204).send();
-});
-
-// 알림 상태 확인
-app.get('/api/notifications', (req, res) => {
-  res.json(Array.from(notifiedEvents));
-});
-
-// 알림 상태 업데이트
-app.post('/api/notifications', (req, res) => {
-  const { eventId, notified } = req.body;
-  if (notified) {
-    notifiedEvents.add(eventId);
-  } else {
-    notifiedEvents.delete(eventId);
-  }
-  res.status(200).send();
 });
 
 // 서버 시작
