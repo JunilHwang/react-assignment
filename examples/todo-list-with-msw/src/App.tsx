@@ -60,7 +60,10 @@ const App: React.FC = () => {
               checked={todo.completed}
               onChange={() => toggleTodo(todo.id)}
             />
-            <span style={{ textDecoration: todo.completed ? 'line-through' : 'none' }}>
+            <span
+              className={todo.completed ? 'completed' : undefined}
+              style={{ textDecoration: todo.completed ? 'line-through' : 'none' }}
+            >
               {todo.text}
             </span>
             <button onClick={() => deleteTodo(todo.id)}>삭제</button>
