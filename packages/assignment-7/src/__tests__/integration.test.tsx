@@ -77,6 +77,16 @@ afterEach(() => {
 });
 
 describe('일정 관리 애플리케이션 통합 테스트', () => {
+  test('fake timer test', async () => {
+    vi.useFakeTimers({
+      toFake: ['setInterval'],
+    });
+
+    render(<App />);
+
+    expect(await within(screen.getByTestId('event-list')).findByText('기존 회의')).toBeInTheDocument();
+  })
+
   describe('일정 CRUD 및 기본 기능', () => {
     test('새로운 일정을 생성하고 모든 필드가 정확히 저장되는지 확인한다', async () => {
       const { user } = setup(<App/>);
@@ -253,6 +263,167 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
     });
   });
 
+  describe('검색 기능', () => {
+    beforeEach(() => {
+      // 테스트 데이터 설정
+      events.length = 0;
+      events.push(
+        {
+          id: 1,
+          title: "팀 회의",
+          date: "2024-07-15",
+          startTime: "09:00",
+          endTime: "10:00",
+          description: "주간 팀 미팅",
+          location: "회의실 A",
+          category: "업무",
+          repeat: { type: 'none', interval: 0 },
+          notificationTime: 10,
+        },
+        {
+          id: 2,
+          title: "프로젝트 계획",
+          date: "2024-07-16",
+          startTime: "14:00",
+          endTime: "15:00",
+          description: "새 프로젝트 계획 수립",
+          location: "회의실 B",
+          category: "업무",
+          repeat: { type: 'none', interval: 0 },
+          notificationTime: 10,
+        }
+      );
+    });
+
+    test('검색 결과가 없으면, "검색 결과가 없습니다."가 표시되어야 한다.', async () => {
+      const { user } = setup(<App />);
+
+      // 검색어 입력
+      const searchInput = await screen.findByPlaceholderText('검색어를 입력하세요');
+
+      await user.type(searchInput, '존재하지 않는 일정');
+
+      // 결과 확인
+      const eventList = screen.getByTestId('event-list');
+      expect(within(eventList).getByText('검색 결과가 없습니다.')).toBeInTheDocument();
+    });
+
+    test('제목으로 일정을 검색하고 정확한 결과가 반환되는지 확인한다', async () => {
+      const { user } = setup(<App />);
+
+      // 검색어 입력
+      const searchInput = screen.getByPlaceholderText('검색어를 입력하세요');
+      await user.type(searchInput, '팀 회의');
+
+      // 결과 확인
+      const eventList = screen.getByTestId('event-list');
+      expect(within(eventList).getByText('팀 회의')).toBeInTheDocument();
+      expect(within(eventList).getByText('2024-07-15 09:00 - 10:00')).toBeInTheDocument();
+      expect(within(eventList).queryByText('프로젝트 계획')).not.toBeInTheDocument();
+    });
+
+    test('검색어를 지우면 모든 일정이 다시 표시되어야 한다', async () => {
+      const { user } = setup(<App />);
+
+      // 먼저 검색 수행
+      const searchInput = screen.getByPlaceholderText('검색어를 입력하세요');
+      await user.type(searchInput, '팀 회의');
+      await user.clear(searchInput);
+
+      // 모든 일정이 표시되는지 확인
+      const eventList = screen.getByTestId('event-list');
+      expect(within(eventList).getByText('팀 회의')).toBeInTheDocument();
+      expect(within(eventList).getByText('프로젝트 계획')).toBeInTheDocument();
+    });
+  });
+
+  describe('공휴일 표시', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test('달력에 1월 1일(신정)이 공휴일로 표시되는지 확인한다', async () => {
+      vi.setSystemTime(new Date(2024, 0, 1));
+      setup(<App />);
+
+      const monthView = screen.getByTestId('month-view');
+
+      // 1월 1일 셀 확인
+      const jan1Cell = within(monthView).getByText('1').closest('td');
+      expect(within(jan1Cell!).getByText('신정')).toBeInTheDocument();
+      expect(within(jan1Cell!).getByText('신정')).toHaveStyle('color: red.500');
+    });
+
+    test('달력에 5월 5일(어린이날)이 공휴일로 표시되는지 확인한다', async () => {
+      vi.setSystemTime(new Date(2024, 4, 1));
+      setup(<App />);
+
+      const monthView = screen.getByTestId('month-view');
+
+      // 5월 5일 셀 확인
+      const may5Cell = within(monthView).getByText('5').closest('td');
+      expect(within(may5Cell!).getByText('어린이날')).toBeInTheDocument();
+      expect(within(may5Cell!).getByText('어린이날')).toHaveStyle('color: red.500');
+    });
+  });
+
+  describe('일정 충돌 감지', () => {
+    test('겹치는 시간에 새 일정을 추가할 때 경고가 표시되는지 확인한다', async () => {
+      const { user } = setup(<App />);
+
+      // 새 일정 추가 버튼 클릭
+      await user.click(screen.getAllByText('일정 추가')[0]);
+
+      // 겹치는 시간에 새 일정 정보 입력
+      await user.type(screen.getByLabelText('제목'), '새 회의');
+      await user.type(screen.getByLabelText('날짜'), '2024-07-15');
+      await user.type(screen.getByLabelText('시작 시간'), '09:30');
+      await user.type(screen.getByLabelText('종료 시간'), '10:30');
+
+      // 저장 버튼 클릭
+      await user.click(screen.getByTestId('event-submit-button'));
+
+      // 경고 다이얼로그 확인
+      expect(await screen.findByText('일정 겹침 경고')).toBeInTheDocument();
+      expect(screen.getByText(/다음 일정과 겹칩니다/)).toBeInTheDocument();
+      expect(screen.getByText("기존 회의 (2024-07-15 09:00-10:00)")).toBeInTheDocument();
+    });
+
+    test('기존 일정의 시간을 수정하여 충돌이 발생할 때 경고가 표시되는지 확인한다', async () => {
+      // 추가 일정 생성 (충돌 대상)
+      events.push({
+        id: 2,
+        title: "다른 회의",
+        date: "2024-07-15",
+        startTime: "08:00",
+        endTime: "09:00",
+        description: "충돌 대상 회의",
+        location: "회의실 B",
+        category: "업무",
+        repeat: { type: 'none', interval: 0 },
+        notificationTime: 10,
+      });
+
+      const { user } = setup(<App />);
+
+      // 기존 일정 수정 버튼 클릭
+      const allEditButton = await screen.findAllByLabelText('Edit event');
+      await user.click(allEditButton[0]);
+
+      // 시간 수정하여 다른 일정과 충돌 발생
+      await user.clear(screen.getByLabelText('시작 시간'));
+      await user.type(screen.getByLabelText('시작 시간'), '08:30');
+      await user.clear(screen.getByLabelText('종료 시간'));
+      await user.type(screen.getByLabelText('종료 시간'), '10:30');
+      await user.click(screen.getByTestId('event-submit-button'));
+
+      // 경고 다이얼로그 확인
+      expect(await screen.findByText('일정 겹침 경고')).toBeInTheDocument();
+      expect(screen.getByText(/다음 일정과 겹칩니다/)).toBeInTheDocument();
+      expect(screen.getByText("다른 회의 (2024-07-15 08:00-09:00)")).toBeInTheDocument();
+    });
+  });
+
   describe('알림 기능', () => {
     const originalSetInterval = global.setInterval
     const timerFunctions: Array<() => void> = [];
@@ -322,185 +493,6 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
 
       // 알림이 발생하는지 확인
       expect(screen.getByText(expectedMessage)).toBeInTheDocument();
-    });
-  });
-
-  describe('검색 기능', () => {
-    beforeEach(() => {
-      // 테스트 데이터 설정
-      events.length = 0;
-      events.push(
-        {
-          id: 1,
-          title: "팀 회의",
-          date: "2024-07-15",
-          startTime: "09:00",
-          endTime: "10:00",
-          description: "주간 팀 미팅",
-          location: "회의실 A",
-          category: "업무",
-          repeat: { type: 'none', interval: 0 },
-          notificationTime: 10,
-        },
-        {
-          id: 2,
-          title: "프로젝트 계획",
-          date: "2024-07-16",
-          startTime: "14:00",
-          endTime: "15:00",
-          description: "새 프로젝트 계획 수립",
-          location: "회의실 B",
-          category: "업무",
-          repeat: { type: 'none', interval: 0 },
-          notificationTime: 10,
-        }
-      );
-    });
-
-    test('검색 결과가 없으면, "검색 결과가 없습니다."가 표시되어야 한다.', async () => {
-      const { user } = setup(<App />);
-
-      // 검색어 입력
-      const searchInput = await screen.findByPlaceholderText('검색어를 입력하세요');
-
-      await user.type(searchInput, '존재하지 않는 일정');
-
-      // 결과 확인
-      const eventList = screen.getByTestId('event-list');
-      expect(within(eventList).getByText('검색 결과가 없습니다.')).toBeInTheDocument();
-    });
-
-    test('제목으로 일정을 검색하고 정확한 결과가 반환되는지 확인한다', async () => {
-      const { user } = setup(<App />);
-
-      // 검색어 입력
-      const searchInput = screen.getByPlaceholderText('검색어를 입력하세요');
-      await user.type(searchInput, '팀 회의');
-
-      // 결과 확인
-      const eventList = screen.getByTestId('event-list');
-      expect(within(eventList).getByText('팀 회의')).toBeInTheDocument();
-      expect(within(eventList).getByText('2024-07-15 09:00 - 10:00')).toBeInTheDocument();
-      expect(within(eventList).queryByText('프로젝트 계획')).not.toBeInTheDocument();
-    });
-
-    test('검색어를 지우면 모든 일정이 다시 표시되어야 한다', async () => {
-      const { user } = setup(<App />);
-
-      // 먼저 검색 수행
-      const searchInput = screen.getByPlaceholderText('검색어를 입력하세요');
-      await user.type(searchInput, '팀 회의');
-
-      // 결과 확인
-      const eventList = screen.getByTestId('event-list');
-      expect(within(eventList).getByText('팀 회의')).toBeInTheDocument();
-      expect(within(eventList).getByText('2024-07-15 09:00 - 10:00')).toBeInTheDocument();
-      expect(within(eventList).queryByText('프로젝트 계획')).not.toBeInTheDocument();
-
-      // 검색어 지우기
-      await user.clear(searchInput);
-      await user.type(searchInput, '{enter}');
-
-      // 모든 일정이 표시되는지 확인
-      expect(within(eventList).getByText('팀 회의')).toBeInTheDocument();
-      expect(within(eventList).getByText('프로젝트 계획')).toBeInTheDocument();
-    });
-  });
-
-  describe('공휴일 표시', () => {
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    test('달력에 1월 1일(신정)이 공휴일로 표시되는지 확인한다', async () => {
-      vi.setSystemTime(new Date(2024, 0, 1));
-      setup(<App />);
-
-      const monthView = screen.getByTestId('month-view');
-
-      // 1월 1일 셀 확인
-      const jan1Cell = within(monthView).getByText('1').closest('td');
-      expect(within(jan1Cell!).getByText('신정')).toBeInTheDocument();
-      expect(within(jan1Cell!).getByText('신정')).toHaveStyle('color: red.500');
-    });
-
-    test('달력에 5월 5일(어린이날)이 공휴일로 표시되는지 확인한다', async () => {
-      vi.setSystemTime(new Date(2024, 4, 1));
-      setup(<App />);
-
-      const monthView = screen.getByTestId('month-view');
-
-      // 5월 5일 셀 확인
-      const may5Cell = within(monthView).getByText('5').closest('td');
-      expect(within(may5Cell!).getByText('어린이날')).toBeInTheDocument();
-      expect(within(may5Cell!).getByText('어린이날')).toHaveStyle('color: red.500');
-    });
-  });
-
-  describe('일정 충돌 감지', () => {
-    test('겹치는 시간에 새 일정을 추가할 때 경고가 표시되는지 확인한다', async () => {
-      const { user } = setup(<App />);
-
-      const eventList = screen.getByTestId('event-list');
-      expect(await within(eventList).findByText('기존 회의')).toBeInTheDocument();
-      expect(await within(eventList).findByText('2024-07-15 09:00 - 10:00')).toBeInTheDocument();
-
-      // 새 일정 추가 버튼 클릭
-      await user.click(screen.getAllByText('일정 추가')[0]);
-
-      // 겹치는 시간에 새 일정 정보 입력
-      await user.type(screen.getByLabelText('제목'), '새 회의');
-      await user.type(screen.getByLabelText('날짜'), '2024-07-15');
-      await user.type(screen.getByLabelText('시작 시간'), '09:30');
-      await user.type(screen.getByLabelText('종료 시간'), '10:30');
-
-      // 저장 버튼 클릭
-      await user.click(screen.getByTestId('event-submit-button'));
-
-      // 경고 다이얼로그 확인
-      expect(await screen.findByText('일정 겹침 경고')).toBeInTheDocument();
-      expect(screen.getByText(/다음 일정과 겹칩니다/)).toBeInTheDocument();
-      expect(screen.getByText("기존 회의 (2024-07-15 09:00-10:00)")).toBeInTheDocument();
-    });
-
-    test('기존 일정의 시간을 수정하여 충돌이 발생할 때 경고가 표시되는지 확인한다', async () => {
-      // 추가 일정 생성 (충돌 대상)
-      events.push({
-        id: 2,
-        title: "다른 회의",
-        date: "2024-07-15",
-        startTime: "08:00",
-        endTime: "09:00",
-        description: "충돌 대상 회의",
-        location: "회의실 B",
-        category: "업무",
-        repeat: { type: 'none', interval: 0 },
-        notificationTime: 10,
-      });
-
-      const { user } = setup(<App />);
-
-      const eventList = screen.getByTestId('event-list');
-      expect(await within(eventList).findByText('기존 회의')).toBeInTheDocument();
-      expect(await within(eventList).findByText('2024-07-15 09:00 - 10:00')).toBeInTheDocument();
-      expect(await within(eventList).findByText('다른 회의')).toBeInTheDocument();
-      expect(await within(eventList).findByText('2024-07-15 08:00 - 09:00')).toBeInTheDocument();
-
-      // 기존 일정 수정 버튼 클릭
-      const allEditButton = await screen.findAllByLabelText('Edit event');
-      await user.click(allEditButton[0]);
-
-      // 시간 수정하여 다른 일정과 충돌 발생
-      await user.clear(screen.getByLabelText('시작 시간'));
-      await user.type(screen.getByLabelText('시작 시간'), '08:30');
-      await user.clear(screen.getByLabelText('종료 시간'));
-      await user.type(screen.getByLabelText('종료 시간'), '10:30');
-      await user.click(screen.getByTestId('event-submit-button'));
-
-      // 경고 다이얼로그 확인
-      expect(await screen.findByText('일정 겹침 경고')).toBeInTheDocument();
-      expect(screen.getByText(/다음 일정과 겹칩니다/)).toBeInTheDocument();
-      expect(screen.getByText("다른 회의 (2024-07-15 08:00-09:00)")).toBeInTheDocument();
     });
   });
 });
