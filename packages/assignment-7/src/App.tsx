@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Alert,
   AlertDialog,
@@ -29,7 +29,6 @@ import {
   Thead,
   Tooltip,
   Tr,
-  useInterval,
   useToast,
   VStack,
 } from '@chakra-ui/react';
@@ -38,9 +37,11 @@ import { formatDate, formatMonth, formatWeek, getEventsForDay, getWeekDates, get
 import { Event, RepeatType } from "./types";
 import { getTimeErrorMessage } from "./utils/timeValidation";
 import { findOverlappingEvents } from "./utils/eventOverlap";
-import { getFilteredEvents } from "./utils/eventUtils";
-import { createNotificationMessage, getUpcomingEvents } from "./utils/notificationUtils";
-import { fetchHolidays } from "./apis/fetchHolidays";
+import { useEventForm } from "./hooks/useEventForm.ts";
+import { useEventOperations } from "./hooks/useEventOperations.ts";
+import { useNotifications } from "./hooks/useNotifications.ts";
+import { useCalendarView } from "./hooks/useCalendarView.ts";
+import { useSearch } from "./hooks/useSearch.ts";
 
 const categories = ['업무', '개인', '가족', '기타'];
 
@@ -54,66 +55,37 @@ const notificationOptions = [
   { value: 1440, label: '1일 전' },
 ];
 
-const dummyEvents: Event[] = [];
-
 function App() {
-  const [events, setEvents] = useState<Event[]>(dummyEvents);
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-  const [category, setCategory] = useState('');
-  const [view, setView] = useState<'week' | 'month'>('month');
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [isRepeating, setIsRepeating] = useState(false);
-  const [repeatType, setRepeatType] = useState<RepeatType>('none');
-  const [repeatInterval, setRepeatInterval] = useState(1);
-  const [repeatEndDate, setRepeatEndDate] = useState('');
-  const [notificationTime, setNotificationTime] = useState(10);
-  const [notifications, setNotifications] = useState<{ id: number; message: string }[]>([]);
-  const [notifiedEvents, setNotifiedEvents] = useState<number[]>([]);
+  const {
+    title, setTitle,
+    date, setDate,
+    startTime, endTime,
+    description, setDescription,
+    location, setLocation,
+    category, setCategory,
+    isRepeating, setIsRepeating,
+    repeatType, setRepeatType,
+    repeatInterval, setRepeatInterval,
+    repeatEndDate, setRepeatEndDate,
+    notificationTime, setNotificationTime,
+    startTimeError, endTimeError,
+    editingEvent, setEditingEvent,
+    handleStartTimeChange,
+    handleEndTimeChange,
+    resetForm,
+    editEvent,
+  } = useEventForm();
+
+  const { events, saveEvent, deleteEvent } = useEventOperations(Boolean(editingEvent), () => setEditingEvent(null));
+  const { notifications, notifiedEvents, setNotifications } = useNotifications(events);
+  const { view, setView, currentDate, holidays, navigate } = useCalendarView();
+  const { searchTerm, filteredEvents, setSearchTerm }  = useSearch(events, currentDate, view);
 
   const [isOverlapDialogOpen, setIsOverlapDialogOpen] = useState(false);
   const [overlappingEvents, setOverlappingEvents] = useState<Event[]>([]);
-
-  const [{
-    startTimeError,
-    endTimeError
-  }, setTimeError] = useState<Record<'startTimeError' | 'endTimeError', string | null>>({
-    startTimeError: null,
-    endTimeError: null
-  });
-
-  const [currentDate, setCurrentDate] = useState(new Date());
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [holidays, setHolidays] = useState<{ [key: string]: string }>({});
-
-
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   const toast = useToast();
-
-  const fetchEvents = async () => {
-    try {
-      const response = await fetch('/api/events');
-      if (!response.ok) {
-        throw new Error('Failed to fetch events');
-      }
-      const data = await response.json();
-      setEvents(data);
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      toast({
-        title: "이벤트 로딩 실패",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
 
   const addOrUpdateEvent = async () => {
     if (!title || !date || !startTime || !endTime) {
@@ -126,7 +98,6 @@ function App() {
       return;
     }
 
-    getTimeErrorMessage(startTime, endTime);
     if (startTimeError || endTimeError) {
       toast({
         title: "시간 설정을 확인해주세요.",
@@ -139,13 +110,7 @@ function App() {
 
     const eventData: Event = {
       id: editingEvent ? editingEvent.id : Date.now(),
-      title,
-      date,
-      startTime,
-      endTime,
-      description,
-      location,
-      category,
+      title, date, startTime, endTime, description, location, category,
       repeat: {
         type: isRepeating ? repeatType : 'none',
         interval: repeatInterval,
@@ -160,156 +125,9 @@ function App() {
       setIsOverlapDialogOpen(true);
     } else {
       await saveEvent(eventData);
-    }
-  };
-
-  const saveEvent = async (eventData: Event) => {
-    try {
-      let response;
-      if (editingEvent) {
-        response = await fetch(`/api/events/${eventData.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(eventData),
-        });
-      } else {
-        response = await fetch('/api/events', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(eventData),
-        });
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to save event');
-      }
-
-      await fetchEvents(); // 이벤트 목록 새로고침
-      setEditingEvent(null);
       resetForm();
-      toast({
-        title: editingEvent ? "일정이 수정되었습니다." : "일정이 추가되었습니다.",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-    } catch (error) {
-      console.error('Error saving event:', error);
-      toast({
-        title: "일정 저장 실패",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
     }
   };
-
-  const deleteEvent = async (id: number) => {
-    try {
-      const response = await fetch(`/api/events/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete event');
-      }
-
-      await fetchEvents(); // 이벤트 목록 새로고침
-      toast({
-        title: "일정이 삭제되었습니다.",
-        status: "info",
-        duration: 3000,
-        isClosable: true,
-      });
-    } catch (error) {
-      console.error('Error deleting event:', error);
-      toast({
-        title: "일정 삭제 실패",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const checkUpcomingEvents = () => {
-    const now = new Date();
-    const upcomingEvents = getUpcomingEvents(events, now, notifiedEvents);
-
-    setNotifications(prev => [
-      ...prev,
-      ...upcomingEvents.map(event => ({
-        id: event.id,
-        message: createNotificationMessage(event),
-      }))
-    ]);
-
-    setNotifiedEvents(prev => [
-      ...prev,
-      ...upcomingEvents.map(({ id }) => id),
-    ]);
-  };
-
-  const handleStartTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const newStartTime = e.target.value;
-    setStartTime(newStartTime);
-    setTimeError(getTimeErrorMessage(newStartTime, endTime));
-  };
-
-  const handleEndTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const newEndTime = e.target.value;
-    setEndTime(newEndTime);
-    setTimeError(getTimeErrorMessage(startTime, newEndTime));
-  };
-
-  const resetForm = () => {
-    setTitle('');
-    setDate('');
-    setStartTime('');
-    setEndTime('');
-    setDescription('');
-    setLocation('');
-    setCategory('');
-    setEditingEvent(null);
-    setIsRepeating(false);
-    setRepeatType('none');
-    setRepeatInterval(1);
-    setRepeatEndDate('');
-  };
-
-  const editEvent = (event: Event) => {
-    setEditingEvent(event);
-    setTitle(event.title);
-    setDate(event.date);
-    setStartTime(event.startTime);
-    setEndTime(event.endTime);
-    setDescription(event.description);
-    setLocation(event.location);
-    setCategory(event.category);
-    setIsRepeating(event.repeat.type !== 'none');
-    setRepeatType(event.repeat.type);
-    setRepeatInterval(event.repeat.interval);
-    setRepeatEndDate(event.repeat.endDate || '');
-    setNotificationTime(event.notificationTime);
-  };
-
-  const navigate = (direction: 'prev' | 'next') => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate);
-      if (view === 'week') {
-        newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-      } else if (view === 'month') {
-        newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
-      }
-      return newDate;
-    });
-  };
-
-  const filteredEvents = getFilteredEvents(events, searchTerm, currentDate, view);
 
   const renderWeekView = () => {
     const weekDates = getWeekDates(currentDate);
@@ -418,17 +236,6 @@ function App() {
       </VStack>
     );
   };
-
-  useInterval(checkUpcomingEvents, 1000); // 1초마다 체크
-
-  useEffect(() => {
-    setHolidays(fetchHolidays(currentDate));
-  }, [currentDate]);
-
-  useEffect(() => {
-    fetchEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <Box w="full" h="100vh" m="auto" p={5}>
