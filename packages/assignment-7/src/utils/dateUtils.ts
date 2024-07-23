@@ -1,4 +1,4 @@
-// dateUtils.ts
+import { Event } from "../types.ts";
 
 /**
  * 주어진 년도와 월의 일수를 반환합니다.
@@ -21,6 +21,38 @@ export function getWeekDates(date: Date): Date[] {
     weekDates.push(nextDate);
   }
   return weekDates;
+}
+
+export function getWeeksAtMonth(currentDate: Date) {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const weeks = [];
+
+  const initWeek = () => Array(7).fill(null)
+
+  let week: Array<number | null> = initWeek();
+
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    week[i] = null;
+  }
+
+  for (const day of days) {
+    const dayIndex = (firstDayOfMonth + day - 1) % 7;
+    week[dayIndex] = day;
+    if (dayIndex === 6 || day === daysInMonth) {
+      weeks.push(week);
+      week = initWeek();
+    }
+  }
+
+  return weeks;
+}
+
+export function getEventsForDay(events: Event[], date: string): Event[] {
+  return events.filter(event => event.date === date);
 }
 
 /**
@@ -47,4 +79,16 @@ export function formatMonth(date: Date): string {
  */
 export function isDateInRange(date: Date, rangeStart: Date, rangeEnd: Date): boolean {
   return date >= rangeStart && date <= rangeEnd;
+}
+
+export function fillZero(value: number, size = 2) {
+  return String(value).padStart(size, "0");
+}
+
+export function formatDate(currentDate: Date, day?: number) {
+  return [
+    currentDate.getFullYear(),
+    fillZero(currentDate.getMonth() + 1),
+    fillZero(day ?? currentDate.getDate())
+  ].join('-');
 }

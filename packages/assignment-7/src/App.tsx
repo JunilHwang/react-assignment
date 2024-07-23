@@ -34,11 +34,14 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { BellIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
-import { formatMonth, formatWeek, getDaysInMonth, getWeekDates } from "./utils";
+import { formatDate, formatMonth, formatWeek, getWeekDates, getWeeksAtMonth } from "./utils";
 import { Event, RepeatType } from "./types.ts";
 import { getTimeErrorMessage } from "./utils/timeValidation.ts";
 import { findOverlappingEvents } from "./utils/eventOverlap.ts";
 import { getFilteredEvents } from "./utils/eventUtils.ts";
+import { createNotificationMessage, getUpcomingEvents } from "./utils/notificationUtils.ts";
+import { fetchHolidays } from "./apis/fetchHolidays.ts";
+import { getEventsForDay } from "./utils/calendarUtils.ts";
 
 const categories = ['업무', '개인', '가족', '기타'];
 
@@ -53,30 +56,6 @@ const notificationOptions = [
 ];
 
 const dummyEvents: Event[] = [];
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const fetchHolidays = (year: number, month: number) => {
-  // 실제로는 API를 호출하여 공휴일 정보를 가져와야 합니다.
-  // 여기서는 예시로 하드코딩된 데이터를 사용합니다.
-  return {
-    "2024-01-01": "신정",
-    "2024-02-09": "설날",
-    "2024-02-10": "설날",
-    "2024-02-11": "설날",
-    "2024-03-01": "삼일절",
-    "2024-05-05": "어린이날",
-    "2024-06-06": "현충일",
-    "2024-08-15": "광복절",
-    "2024-09-16": "추석",
-    "2024-09-17": "추석",
-    "2024-09-18": "추석",
-    "2024-10-03": "개천절",
-    "2024-10-09": "한글날",
-    "2024-12-25": "크리스마스"
-  };
-};
 
 function App() {
   const [events, setEvents] = useState<Event[]>(dummyEvents);
@@ -258,25 +237,22 @@ function App() {
     }
   };
 
-  const checkUpcomingEvents = async () => {
+  const checkUpcomingEvents = () => {
     const now = new Date();
-    const upcomingEvents = events.filter(event => {
-      const eventStart = new Date(`${event.date}T${event.startTime}`);
-      const timeDiff = (eventStart.getTime() - now.getTime()) / (1000 * 60);
-      return timeDiff > 0 && timeDiff <= event.notificationTime && !notifiedEvents.includes(event.id);
-    });
+    const upcomingEvents = getUpcomingEvents(events, now, notifiedEvents);
 
-    for (const event of upcomingEvents) {
-      try {
-        setNotifications(prev => [...prev, {
-          id: event.id,
-          message: `${event.notificationTime}분 후 ${event.title} 일정이 시작됩니다.`
-        }]);
-        setNotifiedEvents(prev => [...prev, event.id]);
-      } catch (error) {
-        console.error('Error updating notification status:', error);
-      }
-    }
+    setNotifications(prev => [
+      ...prev,
+      ...upcomingEvents.map(event => ({
+        id: event.id,
+        message: createNotificationMessage(event),
+      }))
+    ]);
+
+    setNotifiedEvents(prev => [
+      ...prev,
+      ...upcomingEvents.map(({ id }) => id),
+    ]);
   };
 
   const handleStartTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -386,24 +362,7 @@ function App() {
   };
 
   const renderMonthView = () => {
-    const daysInMonth = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
-    const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    const weeks = [];
-    let week = Array(7).fill(null);
-
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      week[i] = null;
-    }
-
-    for (const day of days) {
-      const dayIndex = (firstDayOfMonth + day - 1) % 7;
-      week[dayIndex] = day;
-      if (dayIndex === 6 || day === daysInMonth) {
-        weeks.push(week);
-        week = Array(7).fill(null);
-      }
-    }
+    const weeks = getWeeksAtMonth(currentDate);
 
     return (
       <VStack data-testid="month-view" align="stretch" w="full" spacing={4}>
@@ -420,7 +379,7 @@ function App() {
             {weeks.map((week, weekIndex) => (
               <Tr key={weekIndex}>
                 {week.map((day, dayIndex) => {
-                  const dateString = day ? `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : '';
+                  const dateString = day ? formatDate(currentDate, day) : '';
                   const holiday = holidays[dateString];
 
                   return (
@@ -428,30 +387,26 @@ function App() {
                       {day && (
                         <>
                           <Text fontWeight="bold">{day}</Text>
-                          {holiday && (
-                            <Text color="red.500" fontSize="sm">{holiday}</Text>
-                          )}
-                          {filteredEvents
-                            .filter(event => new Date(event.date).getDate() === day)
-                            .map(event => {
-                              const isNotified = notifiedEvents.includes(event.id);
-                              return (
-                                <Box
-                                  key={event.id}
-                                  p={1}
-                                  my={1}
-                                  bg={isNotified ? "red.100" : "gray.100"}
-                                  borderRadius="md"
-                                  fontWeight={isNotified ? "bold" : "normal"}
-                                  color={isNotified ? "red.500" : "inherit"}
-                                >
-                                  <HStack spacing={1}>
-                                    {isNotified && <BellIcon/>}
-                                    <Text fontSize="sm" noOfLines={1}>{event.title}</Text>
-                                  </HStack>
-                                </Box>
-                              );
-                            })}
+                          {holiday && (<Text color="red.500" fontSize="sm">{holiday}</Text>)}
+                          {getEventsForDay(filteredEvents, day).map(event => {
+                            const isNotified = notifiedEvents.includes(event.id);
+                            return (
+                              <Box
+                                key={event.id}
+                                p={1}
+                                my={1}
+                                bg={isNotified ? "red.100" : "gray.100"}
+                                borderRadius="md"
+                                fontWeight={isNotified ? "bold" : "normal"}
+                                color={isNotified ? "red.500" : "inherit"}
+                              >
+                                <HStack spacing={1}>
+                                  {isNotified && <BellIcon/>}
+                                  <Text fontSize="sm" noOfLines={1}>{event.title}</Text>
+                                </HStack>
+                              </Box>
+                            );
+                          })}
                         </>
                       )}
                     </Td>
@@ -468,14 +423,12 @@ function App() {
   useInterval(checkUpcomingEvents, 1000); // 1초마다 체크
 
   useEffect(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth() + 1;
-    const newHolidays = fetchHolidays(year, month);
-    setHolidays(newHolidays);
+    setHolidays(fetchHolidays(currentDate));
   }, [currentDate]);
 
   useEffect(() => {
     fetchEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

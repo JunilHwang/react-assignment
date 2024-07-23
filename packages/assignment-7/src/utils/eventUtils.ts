@@ -12,7 +12,7 @@ function containsTerm(target: string, term: string) {
   return target.toLowerCase().includes(term.toLowerCase());
 }
 
-function searchEvents(events: Event[], term: string): Event[] {
+function searchEvents(events: Event[], term: string) {
   return events.filter(({ title, description, location }) =>
     containsTerm(title, term) ||
     containsTerm(description, term) ||
