@@ -34,28 +34,10 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { BellIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
-import { getDaysInMonth, getWeekDates, formatWeek, formatMonth, isDateInRange } from "./utils";
-
-type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
-
-interface RepeatInfo {
-  type: RepeatType;
-  interval: number;
-  endDate?: string;
-}
-
-interface Event {
-  id: number;
-  title: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  description: string;
-  location: string;
-  category: string;
-  repeat: RepeatInfo;
-  notificationTime: number; // 분 단위로 저장
-}
+import { formatMonth, formatWeek, getDaysInMonth, getWeekDates, isDateInRange } from "./utils";
+import { Event, RepeatType } from "./types.ts";
+import { getTimeErrorMessage } from "./utils/timeValidation.ts";
+import { findOverlappingEvents } from "./utils/eventOverlap.ts";
 
 const categories = ['업무', '개인', '가족', '기타'];
 
@@ -117,9 +99,13 @@ function App() {
   const [isOverlapDialogOpen, setIsOverlapDialogOpen] = useState(false);
   const [overlappingEvents, setOverlappingEvents] = useState<Event[]>([]);
 
-
-  const [startTimeError, setStartTimeError] = useState<string | null>(null);
-  const [endTimeError, setEndTimeError] = useState<string | null>(null);
+  const [{
+    startTimeError,
+    endTimeError
+  }, setTimeError] = useState<Record<'startTimeError' | 'endTimeError', string | null>>({
+    startTimeError: null,
+    endTimeError: null
+  });
 
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -161,7 +147,7 @@ function App() {
       return;
     }
 
-    validateTime(startTime, endTime);
+    getTimeErrorMessage(startTime, endTime);
     if (startTimeError || endTimeError) {
       toast({
         title: "시간 설정을 확인해주세요.",
@@ -189,7 +175,7 @@ function App() {
       notificationTime,
     };
 
-    const overlapping = findOverlappingEvents(eventData);
+    const overlapping = findOverlappingEvents(eventData, events);
     if (overlapping.length > 0) {
       setOverlappingEvents(overlapping);
       setIsOverlapDialogOpen(true);
@@ -292,54 +278,16 @@ function App() {
     }
   };
 
-  const validateTime = (start: string, end: string) => {
-    if (!start || !end) return;
-
-    const startDate = new Date(`2000-01-01T${start}`);
-    const endDate = new Date(`2000-01-01T${end}`);
-
-    if (startDate >= endDate) {
-      setStartTimeError("시작 시간은 종료 시간보다 빨라야 합니다.");
-      setEndTimeError("종료 시간은 시작 시간보다 늦어야 합니다.");
-    } else {
-      setStartTimeError(null);
-      setEndTimeError(null);
-    }
-  };
-
   const handleStartTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newStartTime = e.target.value;
     setStartTime(newStartTime);
-    validateTime(newStartTime, endTime);
+    setTimeError(getTimeErrorMessage(newStartTime, endTime));
   };
 
   const handleEndTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newEndTime = e.target.value;
     setEndTime(newEndTime);
-    validateTime(startTime, newEndTime);
-  };
-
-
-  // 날짜 문자열을 Date 객체로 변환하는 함수
-  const parseDateTime = (date: string, time: string): Date => {
-    return new Date(`${date}T${time}`);
-  };
-
-  // 두 일정이 겹치는지 확인하는 함수
-  const isOverlapping = (event1: Event, event2: Event): boolean => {
-    const start1 = parseDateTime(event1.date, event1.startTime);
-    const end1 = parseDateTime(event1.date, event1.endTime);
-    const start2 = parseDateTime(event2.date, event2.startTime);
-    const end2 = parseDateTime(event2.date, event2.endTime);
-
-    return start1 < end2 && start2 < end1;
-  };
-
-  // 겹치는 일정을 찾는 함수
-  const findOverlappingEvents = (newEvent: Event): Event[] => {
-    return events.filter(event =>
-      event.id !== newEvent.id && isOverlapping(event, newEvent)
-    );
+    setTimeError(getTimeErrorMessage(startTime, newEndTime));
   };
 
   const resetForm = () => {
@@ -577,7 +525,7 @@ function App() {
                   type="time"
                   value={startTime}
                   onChange={handleStartTimeChange}
-                  onBlur={() => validateTime(startTime, endTime)}
+                  onBlur={() => getTimeErrorMessage(startTime, endTime)}
                   isInvalid={!!startTimeError}
                 />
               </Tooltip>
@@ -589,7 +537,7 @@ function App() {
                   type="time"
                   value={endTime}
                   onChange={handleEndTimeChange}
-                  onBlur={() => validateTime(startTime, endTime)}
+                  onBlur={() => getTimeErrorMessage(startTime, endTime)}
                   isInvalid={!!endTimeError}
                 />
               </Tooltip>
