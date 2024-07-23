@@ -51,8 +51,8 @@ export function getWeeksAtMonth(currentDate: Date) {
   return weeks;
 }
 
-export function getEventsForDay(events: Event[], date: string): Event[] {
-  return events.filter(event => event.date === date);
+export function getEventsForDay(events: Event[], date: number): Event[] {
+  return events.filter(event => new Date(event.date).getDate() === date)
 }
 
 /**

@@ -34,14 +34,13 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { BellIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
-import { formatDate, formatMonth, formatWeek, getWeekDates, getWeeksAtMonth } from "./utils";
-import { Event, RepeatType } from "./types.ts";
-import { getTimeErrorMessage } from "./utils/timeValidation.ts";
-import { findOverlappingEvents } from "./utils/eventOverlap.ts";
-import { getFilteredEvents } from "./utils/eventUtils.ts";
-import { createNotificationMessage, getUpcomingEvents } from "./utils/notificationUtils.ts";
-import { fetchHolidays } from "./apis/fetchHolidays.ts";
-import { getEventsForDay } from "./utils/calendarUtils.ts";
+import { formatDate, formatMonth, formatWeek, getEventsForDay, getWeekDates, getWeeksAtMonth } from "./utils/dateUtils";
+import { Event, RepeatType } from "./types";
+import { getTimeErrorMessage } from "./utils/timeValidation";
+import { findOverlappingEvents } from "./utils/eventOverlap";
+import { getFilteredEvents } from "./utils/eventUtils";
+import { createNotificationMessage, getUpcomingEvents } from "./utils/notificationUtils";
+import { fetchHolidays } from "./apis/fetchHolidays";
 
 const categories = ['업무', '개인', '가족', '기타'];
 

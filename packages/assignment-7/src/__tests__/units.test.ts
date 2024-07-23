@@ -1,21 +1,21 @@
 import { describe, expect, test } from "vitest";
+import { Event } from "../types";
 import {
-  fillZero,
-  formatDate,
-  formatMonth,
-  formatWeek,
-  getDaysInMonth,
+fillZero,
+formatDate,
+formatMonth,
+formatWeek,
+getDaysInMonth,
   getEventsForDay,
   getWeekDates,
-  getWeeksAtMonth,
-  isDateInRange
-} from "../utils";
-import { convertEventToDateRange, findOverlappingEvents, isOverlapping, parseDateTime } from "../utils/eventOverlap.ts"; // 이 함수들이 정의된 파일을 import 해야 합니다.
-import { Event } from "../types";
-import { getTimeErrorMessage } from "../utils/timeValidation.ts";
-import { getFilteredEvents } from "../utils/eventUtils.ts";
-import { fetchHolidays } from "../apis/fetchHolidays.ts";
-import { createNotificationMessage, getUpcomingEvents } from "../utils/notificationUtils.ts";
+getWeeksAtMonth,
+isDateInRange
+} from "../utils/dateUtils";
+import { convertEventToDateRange, findOverlappingEvents, isOverlapping, parseDateTime } from "../utils/eventOverlap"; // 이 함수들이 정의된 파일을 import 해야 합니다.
+import { getTimeErrorMessage } from "../utils/timeValidation";
+import { getFilteredEvents } from "../utils/eventUtils";
+import { createNotificationMessage, getUpcomingEvents } from "../utils/notificationUtils";
+import { fetchHolidays } from "../apis/fetchHolidays";
 
 describe('단위 테스트: 날짜 및 시간 관리', () => {
   describe('getDaysInMonth >', () => {
@@ -99,7 +99,7 @@ describe('단위 테스트: 날짜 및 시간 관리', () => {
     ];
 
     test('특정 날짜의 이벤트만 반환해야 한다', () => {
-      const dayEvents = getEventsForDay(events, '2024-07-01');
+      const dayEvents = getEventsForDay(events, 1);
       expect(dayEvents).toHaveLength(2);
       expect(dayEvents[0].title).toBe('이벤트 1');
       expect(dayEvents[1].title).toBe('이벤트 2');
@@ -442,9 +442,42 @@ describe('단위 테스트: 날짜 및 시간 관리', () => {
 
   describe('getUpcomingEvents >', () => {
     const events: Event[] = [
-      { id: 1, title: '이벤트 1', date: '2023-05-10', startTime: '10:00', endTime: '11:00', description: '', location: '', category: '', repeat: { type: 'none', interval: 0 }, notificationTime: 10 },
-      { id: 2, title: '이벤트 2', date: '2023-05-10', startTime: '14:00', endTime: '15:00', description: '', location: '', category: '', repeat: { type: 'none', interval: 0 }, notificationTime: 30 },
-      { id: 3, title: '이벤트 3', date: '2023-05-11', startTime: '09:00', endTime: '10:00', description: '', location: '', category: '', repeat: { type: 'none', interval: 0 }, notificationTime: 60 },
+      {
+        id: 1,
+        title: '이벤트 1',
+        date: '2023-05-10',
+        startTime: '10:00',
+        endTime: '11:00',
+        description: '',
+        location: '',
+        category: '',
+        repeat: { type: 'none', interval: 0 },
+        notificationTime: 10
+      },
+      {
+        id: 2,
+        title: '이벤트 2',
+        date: '2023-05-10',
+        startTime: '14:00',
+        endTime: '15:00',
+        description: '',
+        location: '',
+        category: '',
+        repeat: { type: 'none', interval: 0 },
+        notificationTime: 30
+      },
+      {
+        id: 3,
+        title: '이벤트 3',
+        date: '2023-05-11',
+        startTime: '09:00',
+        endTime: '10:00',
+        description: '',
+        location: '',
+        category: '',
+        repeat: { type: 'none', interval: 0 },
+        notificationTime: 60
+      },
     ];
 
     test('알림 시간이 도래한 이벤트만 반환해야 한다', () => {
