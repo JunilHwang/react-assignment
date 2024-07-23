@@ -34,10 +34,11 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { BellIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
-import { formatMonth, formatWeek, getDaysInMonth, getWeekDates, isDateInRange } from "./utils";
+import { formatMonth, formatWeek, getDaysInMonth, getWeekDates } from "./utils";
 import { Event, RepeatType } from "./types.ts";
 import { getTimeErrorMessage } from "./utils/timeValidation.ts";
 import { findOverlappingEvents } from "./utils/eventOverlap.ts";
+import { getFilteredEvents } from "./utils/eventUtils.ts";
 
 const categories = ['업무', '개인', '가족', '기타'];
 
@@ -333,31 +334,7 @@ function App() {
     });
   };
 
-  const searchEvents = (term: string) => {
-    if (!term.trim()) return events;
-
-    return events.filter(event =>
-      event.title.toLowerCase().includes(term.toLowerCase()) ||
-      event.description.toLowerCase().includes(term.toLowerCase()) ||
-      event.location.toLowerCase().includes(term.toLowerCase())
-    );
-  };
-
-  const filteredEvents = (() => {
-    const filtered = searchEvents(searchTerm);
-    return filtered.filter(event => {
-      const eventDate = new Date(event.date);
-      if (view === 'week') {
-        const weekDates = getWeekDates(currentDate);
-        return isDateInRange(eventDate, weekDates[0], weekDates[6]);
-      } else if (view === 'month') {
-        const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-        return isDateInRange(eventDate, monthStart, monthEnd);
-      }
-      return true;
-    })
-  })();
+  const filteredEvents = getFilteredEvents(events, searchTerm, currentDate, view);
 
   const renderWeekView = () => {
     const weekDates = getWeekDates(currentDate);

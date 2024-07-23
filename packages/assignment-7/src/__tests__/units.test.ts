@@ -3,6 +3,7 @@ import { formatMonth, formatWeek, getDaysInMonth, getWeekDates, isDateInRange } 
 import { convertEventToDateRange, findOverlappingEvents, isOverlapping, parseDateTime } from "../utils/eventOverlap.ts"; // 이 함수들이 정의된 파일을 import 해야 합니다.
 import { Event } from "../types";
 import { getTimeErrorMessage } from "../utils/timeValidation.ts";
+import { getFilteredEvents } from "../utils/eventUtils.ts";
 
 describe('단위 테스트: 날짜 및 시간 관리', () => {
   describe('getDaysInMonth 함수', () => {
@@ -251,6 +252,37 @@ describe('단위 테스트: 날짜 및 시간 관리', () => {
         expect(result3.startTimeError).toBeNull();
         expect(result3.endTimeError).toBeNull();
       });
+    });
+  });
+
+  describe('getFilteredEvents', () => {
+    const events: Event[] = [
+      { id: 1, title: '이벤트 1', date: '2023-05-01', startTime: '10:00', endTime: '11:00', description: '', location: '', category: '', repeat: { type: 'none', interval: 0 }, notificationTime: 0 },
+      { id: 2, title: '이벤트 2', date: '2023-05-05', startTime: '14:00', endTime: '15:00', description: '', location: '', category: '', repeat: { type: 'none', interval: 0 }, notificationTime: 0 },
+      { id: 3, title: '이벤트 3', date: '2023-05-10', startTime: '09:00', endTime: '10:00', description: '', location: '', category: '', repeat: { type: 'none', interval: 0 }, notificationTime: 0 },
+    ];
+
+    test('검색어에 맞는 이벤트만 반환해야 한다', () => {
+      const result = getFilteredEvents(events, '이벤트 2', new Date('2023-05-01'), 'month');
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('이벤트 2');
+    });
+
+    test('주간 뷰에서 해당 주의 이벤트만 반환해야 한다', () => {
+      const result = getFilteredEvents(events, '', new Date('2023-05-01'), 'week');
+      expect(result).toHaveLength(2);
+      expect(result.map(e => e.title)).toEqual(['이벤트 1', '이벤트 2']);
+    });
+
+    test('월간 뷰에서 해당 월의 이벤트만 반환해야 한다', () => {
+      const result = getFilteredEvents(events, '', new Date('2023-05-01'), 'month');
+      expect(result).toHaveLength(3);
+    });
+
+    test('검색어와 날짜 필터링을 동시에 적용해야 한다', () => {
+      const result = getFilteredEvents(events, '이벤트', new Date('2023-05-01'), 'week');
+      expect(result).toHaveLength(2);
+      expect(result.map(e => e.title)).toEqual(['이벤트 1', '이벤트 2']);
     });
   });
 });
