@@ -1,12 +1,17 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
 import { ReactElement } from "react";
 import { act, render, screen, within } from "@testing-library/react";
 import App from '../App';
 import { userEvent } from "@testing-library/user-event";
+import createMockServer from "./createMockServer";
+import { Event } from "../types";
 
-const MOCK_EVENT_1 = {
+const setup = (element: ReactElement) => {
+  const user = userEvent.setup();
+  return { ...render(element), user };
+}
+
+const MOCK_EVENT_1: Event = {
   id: 1,
   title: "기존 회의",
   date: "2024-07-15",
@@ -19,54 +24,9 @@ const MOCK_EVENT_1 = {
   notificationTime: 10,
 }
 
-const events = [{ ...MOCK_EVENT_1 }];
+const events: Event[] = [{ ...MOCK_EVENT_1 }];
 
-const handlers = [
-  // GET 요청 처리
-  http.get('/api/events', () => {
-    return HttpResponse.json(events);
-  }),
-
-  // POST 요청 처리 (이벤트 추가)
-  http.post('/api/events', async ({ request }) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const newEvent = await request.json() as any;
-    newEvent.id = events.length + 1;  // 간단한 ID 생성
-    events.push(newEvent);
-    return HttpResponse.json(newEvent, { status: 201 });
-  }),
-
-  // PUT 요청 처리 (이벤트 수정)
-  http.put('/api/events/:id', async ({ params, request }) => {
-    const { id } = params;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updatedEvent = await request.json() as any;
-    const index = events.findIndex(event => event.id === Number(id));
-    if (index !== -1) {
-      events[index] = { ...events[index], ...updatedEvent };
-      return HttpResponse.json(events[index]);
-    }
-    return new HttpResponse(null, { status: 404 });
-  }),
-
-  // DELETE 요청 처리 (이벤트 삭제)
-  http.delete('/api/events/:id', ({ params }) => {
-    const { id } = params;
-    const index = events.findIndex(event => event.id === Number(id));
-    if (index !== -1) {
-      events.splice(index, 1);
-      return new HttpResponse(null, { status: 204 });
-    }
-    return new HttpResponse(null, { status: 404 });
-  }),
-];
-
-const server = setupServer(...handlers);
-
-const setup = (element: ReactElement) => {
-  const user = userEvent.setup();
-  return { ...render(element), user };
-}
+const server = createMockServer(events);
 
 beforeAll(() => server.listen());
 afterAll(() => server.close());
@@ -82,7 +42,7 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
       toFake: ['setInterval'],
     });
 
-    render(<App />);
+    render(<App/>);
 
     expect(await within(screen.getByTestId('event-list')).findByText('기존 회의')).toBeInTheDocument();
   })
@@ -300,7 +260,7 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
     });
 
     test('검색 결과가 없으면, "검색 결과가 없습니다."가 표시되어야 한다.', async () => {
-      const { user } = setup(<App />);
+      const { user } = setup(<App/>);
 
       // 검색어 입력
       const searchInput = await screen.findByPlaceholderText('검색어를 입력하세요');
@@ -313,7 +273,7 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
     });
 
     test('제목으로 일정을 검색하고 정확한 결과가 반환되는지 확인한다', async () => {
-      const { user } = setup(<App />);
+      const { user } = setup(<App/>);
 
       // 검색어 입력
       const searchInput = screen.getByPlaceholderText('검색어를 입력하세요');
@@ -327,7 +287,7 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
     });
 
     test('검색어를 지우면 모든 일정이 다시 표시되어야 한다', async () => {
-      const { user } = setup(<App />);
+      const { user } = setup(<App/>);
 
       // 먼저 검색 수행
       const searchInput = screen.getByPlaceholderText('검색어를 입력하세요');
@@ -348,7 +308,7 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
 
     test('달력에 1월 1일(신정)이 공휴일로 표시되는지 확인한다', async () => {
       vi.setSystemTime(new Date(2024, 0, 1));
-      setup(<App />);
+      setup(<App/>);
 
       const monthView = screen.getByTestId('month-view');
 
@@ -360,7 +320,7 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
 
     test('달력에 5월 5일(어린이날)이 공휴일로 표시되는지 확인한다', async () => {
       vi.setSystemTime(new Date(2024, 4, 1));
-      setup(<App />);
+      setup(<App/>);
 
       const monthView = screen.getByTestId('month-view');
 
@@ -373,7 +333,7 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
 
   describe('일정 충돌 감지', () => {
     test('겹치는 시간에 새 일정을 추가할 때 경고가 표시되는지 확인한다', async () => {
-      const { user } = setup(<App />);
+      const { user } = setup(<App/>);
 
       // 새 일정 추가 버튼 클릭
       await user.click(screen.getAllByText('일정 추가')[0]);
@@ -408,7 +368,7 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
         notificationTime: 10,
       });
 
-      const { user } = setup(<App />);
+      const { user } = setup(<App/>);
 
       // 기존 일정 수정 버튼 클릭
       const allEditButton = await screen.findAllByLabelText('Edit event');
