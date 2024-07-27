@@ -389,24 +389,15 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
   });
 
   describe('알림 기능', () => {
-    const originalSetInterval = global.setInterval
-    const timerFunctions: Array<() => void> = [];
-    const runAllTimers = () => timerFunctions.forEach(fn => fn());
+    beforeAll(() => {
+      vi.useFakeTimers({
+        toFake: ['setInterval', 'Date']
+      });
+    })
 
-
-    beforeEach((() => {
-      // setInterval을 모킹
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      global.setInterval = vi.fn((callback) => {
-        timerFunctions.push(callback);
-      })
-    }))
-
-    afterEach(() => {
-      global.setInterval = originalSetInterval;
-      timerFunctions.length = 0;
-    });
+    afterAll(() => {
+      vi.useRealTimers
+    })
 
     test('일정 알림을 설정하고 지정된 시간에 알림이 발생하는지 확인한다', async () => {
       // 현재 시간 설정
@@ -442,8 +433,9 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
 
       // 9분 후로 시간 이동 (알림 발생 1분 전)
       vi.setSystemTime(new Date(now + 9 * 60 * 1000));
+
       act(() => {
-        runAllTimers();
+        vi.advanceTimersByTime(1000);
       })
 
       // 알림이 아직 발생하지 않았는지 확인
@@ -451,8 +443,9 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
 
       // 10분 후로 이동
       vi.setSystemTime(new Date(now + 10 * 60 * 1000));
+
       act(() => {
-        runAllTimers();
+        vi.advanceTimersByTime(1000);
       })
 
       // 알림이 발생하는지 확인
