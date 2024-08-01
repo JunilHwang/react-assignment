@@ -45,11 +45,15 @@ afterAll(() => {
 describe('단위 테스트: 커스텀훅', () => {
   describe('useCalendarView > ', () => {
     test('초기 상태가 올바르게 설정되어야 한다', () => {
+      vi.useFakeTimers({toFake: ['Date']  });
+      vi.setSystemTime(new Date(2024, 6, 1))
       const { result } = renderHook(() => useCalendarView());
 
       expect(result.current.view).toBe('month');
       expect(result.current.currentDate).toBeInstanceOf(Date);
       expect(result.current.holidays).toEqual({});
+
+      vi.useRealTimers();
     });
 
     test('view를 변경할 수 있어야 한다', () => {

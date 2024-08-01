@@ -28,24 +28,25 @@ const events: Event[] = [{ ...MOCK_EVENT_1 }];
 
 const server = createMockServer(events);
 
+
+beforeEach(() => {
+  vi.useFakeTimers({
+    toFake: ['setInterval', 'Date']
+  });
+  vi.setSystemTime(new Date(2024, 6, 1));
+})
+
 beforeAll(() => server.listen());
+
 afterAll(() => server.close());
 
 afterEach(() => {
   events.length = 0;
-  events.push({ ...MOCK_EVENT_1 })
+  events.push({ ...MOCK_EVENT_1 });
+  vi.useRealTimers();
 });
 
 describe('일정 관리 애플리케이션 통합 테스트', () => {
-  test('fake timer test', async () => {
-    vi.useFakeTimers({
-      toFake: ['setInterval'],
-    });
-
-    render(<App/>);
-
-    expect(await within(screen.getByTestId('event-list')).findByText('기존 회의')).toBeInTheDocument();
-  })
 
   describe('일정 CRUD 및 기본 기능', () => {
     test('새로운 일정을 생성하고 모든 필드가 정확히 저장되는지 확인한다', async () => {
@@ -389,16 +390,6 @@ describe('일정 관리 애플리케이션 통합 테스트', () => {
   });
 
   describe('알림 기능', () => {
-    beforeAll(() => {
-      vi.useFakeTimers({
-        toFake: ['setInterval', 'Date']
-      });
-    })
-
-    afterAll(() => {
-      vi.useRealTimers
-    })
-
     test('일정 알림을 설정하고 지정된 시간에 알림이 발생하는지 확인한다', async () => {
       // 현재 시간 설정
       const fillZero = (n: number) => String(n).padStart(2, '0');
