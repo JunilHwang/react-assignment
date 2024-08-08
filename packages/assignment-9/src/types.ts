@@ -6,3 +6,10 @@ export interface Lecture {
   schedule: string;
   grade: number;
 }
+
+export interface Schedule {
+  lecture: Lecture
+  day: string;
+  range: number[]
+  room?: string;
+}

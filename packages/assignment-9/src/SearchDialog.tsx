@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Button,
   Input,
@@ -16,25 +16,54 @@ import {
   Tr,
   VStack
 } from '@chakra-ui/react';
-import { useSchedule } from './ScheduleContext';
+import { useScheduleContext } from './ScheduleContext';
 import { Lecture } from './types';
+import { parseSchedule } from "./utils.ts";
+import axios from "axios";
 
-const SearchDialog: React.FC = () => {
+interface Props {
+  tableId: string;
+}
+
+const SearchDialog = ({ tableId }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const { lectures, setSelectedLectures } = useSchedule();
+  const { setSchedulesMap } = useScheduleContext();
+
+  const [lectures, setLectures] = useState<Lecture[]>([]);
 
   const filteredLectures = lectures.filter(lecture =>
     lecture.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddLecture = (lecture: Lecture) => {
-    setSelectedLectures(prev => [...prev, lecture]);
+  const addLecture = (lecture: Lecture) => {
+    const schedules = parseSchedule(lecture.schedule).map(schedule => ({
+      ...schedule,
+      lecture
+    }))
+
+    setSchedulesMap(prev => ({
+      ...prev,
+      [tableId]: [...prev[tableId], ...schedules]
+    }));
   };
+
+  useEffect(() => {
+    const fetchLectures = async () => {
+      const results = await Promise.all([
+        axios.get<Lecture[]>('/schedules-majors.json'),
+        axios.get<Lecture[]>('/schedules-liberal-arts.json'),
+      ]);
+
+      setLectures(results.flatMap(result => result.data).slice(0, 10));
+    };
+
+    fetchLectures();
+  }, []);
 
   return (
     <>
-      <Button onClick={() => setIsOpen(true)}>검색</Button>
+      <Button size="sm" colorScheme="green" onClick={() => setIsOpen(true)}>검색</Button>
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} size="xl">
         <ModalOverlay/>
         <ModalContent maxW="1000px">
@@ -65,11 +94,11 @@ const SearchDialog: React.FC = () => {
                       <Td>{lecture.id}</Td>
                       <Td>{lecture.title}</Td>
                       <Td>{lecture.credits}</Td>
-                      <Td dangerouslySetInnerHTML={{ __html: lecture.major }} />
-                      <Td dangerouslySetInnerHTML={{ __html: lecture.schedule }} />
+                      <Td dangerouslySetInnerHTML={{ __html: lecture.major }}/>
+                      <Td dangerouslySetInnerHTML={{ __html: lecture.schedule }}/>
                       <Td>{lecture.grade}</Td>
                       <Td>
-                        <Button size="sm" onClick={() => handleAddLecture(lecture)}>추가</Button>
+                        <Button size="sm" colorScheme="green" onClick={() => addLecture(lecture)}>추가</Button>
                       </Td>
                     </Tr>
                   ))}

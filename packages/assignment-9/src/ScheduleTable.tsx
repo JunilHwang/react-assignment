@@ -13,9 +13,14 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { useSchedule } from './ScheduleContext';
 import { DAY_LABELS, 분 } from "./constants";
-import { fill2, parseHnM, parseSchedule } from './utils';
+import { fill2, parseHnM } from './utils';
+import { Schedule } from "./types.ts";
+
+interface Props {
+  schedules: Schedule[];
+  onScheduleTimeClick?: () => void;
+}
 
 const TIMES = [
   ...Array(18)
@@ -30,16 +35,7 @@ const TIMES = [
 ] as const;
 
 
-const ScheduleTable = () => {
-  const { selectedLectures } = useSchedule();
-
-  const schedules = selectedLectures
-    .flatMap((lecture) =>
-      parseSchedule(lecture.schedule).map(schedule => ({
-        ...schedule,
-        lecture
-      }))
-    )
+const ScheduleTable = ({ schedules }: Props) => {
 
   const getLectureBySchedule = (day: string, time: number) =>
     schedules.find(
@@ -47,7 +43,7 @@ const ScheduleTable = () => {
     );
 
   const getColor = (lectureId: string): string => {
-    const lectures = [...new Set(selectedLectures.map(({ id }) => id))];
+    const lectures = [...new Set(schedules.map(({ lecture }) => lecture.id))];
     const colors = ["#fdd", "#ffd", "#dff", "#ddf", "#fdf", "#dfd"];
     return colors[lectures.indexOf(lectureId) % colors.length];
   };
@@ -117,7 +113,6 @@ const ScheduleTable = () => {
                   borderLeft="1px solid"
                   borderColor="gray.300"
                   cursor="pointer"
-                  _hover={{ bg: 'yellow.100' }}
                 >
                   {schedule && (
                     <Popover>
@@ -134,8 +129,8 @@ const ScheduleTable = () => {
                         </Box>
                       </PopoverTrigger>
                       <PopoverContent>
-                        <PopoverArrow />
-                        <PopoverCloseButton />
+                        <PopoverArrow/>
+                        <PopoverCloseButton/>
                         <PopoverBody>
                           <Text>강의를 삭제하시겠습니까?</Text>
                           <Button colorScheme="red" size="xs" onClick={() => handleRemoveLecture(day, timeKey + 1)}>

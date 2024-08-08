@@ -5,6 +5,14 @@ export const parseHnM = (current: number) => {
   return `${fill2(date.getHours())}:${fill2(date.getMinutes())}`;
 };
 
+const getTimeRange = (value: string): number[] => {
+  const [start, end] = value.split("~").map(Number);
+  if (end === undefined) return [start];
+  return Array(end - start + 1)
+    .fill(start)
+    .map((v, k) => v + k);
+}
+
 export const parseSchedule = (schedule: string) => {
   const schedules = schedule.split('<p>');
   return schedules.map(schedule => {
@@ -13,13 +21,7 @@ export const parseSchedule = (schedule: string) => {
 
     const [day] = schedule.split(/(\d+)/);
 
-    const range = [schedule.replace(reg, "$2")].map((v) => {
-      const [start, end] = v.split("~").map(Number);
-      if (end === undefined) return [start];
-      return Array(end - start + 1)
-        .fill(start)
-        .map((v, k) => v + k);
-    })[0] as number[];
+    const range = getTimeRange(schedule.replace(reg, "$2"));
 
     const room = schedule.replace(reg, "$4")?.replace(/\(|\)/g, "");
 
