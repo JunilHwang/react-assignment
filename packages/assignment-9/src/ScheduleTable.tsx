@@ -19,7 +19,7 @@ import { Schedule } from "./types.ts";
 
 interface Props {
   schedules: Schedule[];
-  onScheduleTimeClick?: () => void;
+  onScheduleTimeClick?: (timeInfo: { day: string, time: number }) => void;
 }
 
 const TIMES = [
@@ -35,7 +35,7 @@ const TIMES = [
 ] as const;
 
 
-const ScheduleTable = ({ schedules }: Props) => {
+const ScheduleTable = ({ schedules, onScheduleTimeClick }: Props) => {
 
   const getLectureBySchedule = (day: string, time: number) =>
     schedules.find(
@@ -113,6 +113,8 @@ const ScheduleTable = ({ schedules }: Props) => {
                   borderLeft="1px solid"
                   borderColor="gray.300"
                   cursor="pointer"
+                  _hover={{ bg: 'yellow.100' }}
+                  onClick={() => onScheduleTimeClick?.({ day, time: timeKey + 1 })}
                 >
                   {schedule && (
                     <Popover>
